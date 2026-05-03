@@ -22,7 +22,9 @@ const els = {
 };
 
 let profile = PROFILES[0];
-let elapsedSeconds = 0;
+let elapsedSeconds = 0;       // valor mostrado (segundos enteros)
+let pausedElapsed = 0;        // segundos acumulados al inicio del tramo activo
+let startTimestamp = null;    // Date.now() en el último start
 let interval = null;
 let running = false;
 let chart = null;
@@ -30,6 +32,7 @@ let lastPointTime = null;
 let muted = false;
 let audioCtx = null;
 let alertTimeout = null;
+let wakeLock = null;
 const ALERT_DURATION_MS = 12000;
 
 /* ---------- helpers ---------- */
@@ -124,17 +127,21 @@ function speak(text) {
 }
 
 function triggerStepAlert(point) {
-  els.temp.classList.add('alerting');
-  els.nextTemp.classList.add('alerting');
-  if (alertTimeout) clearTimeout(alertTimeout);
-  alertTimeout = setTimeout(() => {
-    els.temp.classList.remove('alerting');
-    els.nextTemp.classList.remove('alerting');
-  }, ALERT_DURATION_MS);
+  try {
+    els.temp.classList.add('alerting');
+    els.nextTemp.classList.add('alerting');
+    if (alertTimeout) clearTimeout(alertTimeout);
+    alertTimeout = setTimeout(() => {
+      els.temp.classList.remove('alerting');
+      els.nextTemp.classList.remove('alerting');
+    }, ALERT_DURATION_MS);
 
-  if (!muted) {
-    tripleBeep();
-    speak(point.phase + '. ' + point.temp + ' grados');
+    if (!muted) {
+      tripleBeep();
+      speak(point.phase + '. ' + point.temp + ' grados');
+    }
+  } catch (err) {
+    console.error('alert error', err);
   }
 }
 
@@ -200,29 +207,58 @@ function setButtons() {
 
 /* ---------- timer control ---------- */
 
+function tick() {
+  if (startTimestamp === null) return;
+  const newElapsed = pausedElapsed + Math.floor((Date.now() - startTimestamp) / 1000);
+  if (newElapsed === elapsedSeconds) return;
+  elapsedSeconds = newElapsed;
+  updateUI();
+  saveSession();
+  if (elapsedSeconds >= maxMinutes() * 60) {
+    pauseRoast();
+  }
+}
+
+async function acquireWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch (_) { /* permiso denegado o no soportado */ }
+}
+
+function releaseWakeLock() {
+  if (wakeLock) {
+    wakeLock.release().catch(() => {});
+    wakeLock = null;
+  }
+}
+
 function startRoast() {
   if (running) return;
   ensureAudio();
   running = true;
+  pausedElapsed = elapsedSeconds;
+  startTimestamp = Date.now();
   setButtons();
   saveSession();
-
-  interval = setInterval(() => {
-    elapsedSeconds++;
-    updateUI();
-    saveSession();
-    if (elapsedSeconds >= maxMinutes() * 60) {
-      pauseRoast();
-    }
-  }, 1000);
+  acquireWakeLock();
+  interval = setInterval(tick, 250);
 }
 
 function pauseRoast() {
+  if (!running) return;
   running = false;
   if (interval) {
     clearInterval(interval);
     interval = null;
   }
+  if (startTimestamp !== null) {
+    elapsedSeconds = pausedElapsed + Math.floor((Date.now() - startTimestamp) / 1000);
+    pausedElapsed = elapsedSeconds;
+    startTimestamp = null;
+  }
+  releaseWakeLock();
   setButtons();
   saveSession();
 }
@@ -230,6 +266,8 @@ function pauseRoast() {
 function resetRoast() {
   pauseRoast();
   elapsedSeconds = 0;
+  pausedElapsed = 0;
+  startTimestamp = null;
   document.body.classList.remove('flash-red');
   els.temp.classList.remove('alerting');
   els.nextTemp.classList.remove('alerting');
@@ -394,6 +432,14 @@ function bindEvents() {
   els.btnReset.addEventListener('click', resetRoast);
   els.btnMute.addEventListener('click', () => setMuted(!muted));
   els.select.addEventListener('change', e => setProfile(e.target.value));
+  // Re-sincroniza el reloj (Date.now real) al volver a la pestaña y reintenta el wake lock
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    if (running) {
+      tick();
+      acquireWakeLock();
+    }
+  });
 }
 
 (function init() {
