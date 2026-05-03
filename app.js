@@ -125,7 +125,7 @@ function ackAlert() {
 
 function setMuted(value) {
   muted = !!value;
-  els.btnMute.textContent = muted ? '🔇 Silencio' : '🔔 Sonido';
+  els.btnMute.textContent = muted ? 'Silencio' : 'Sonido';
   els.btnMute.classList.toggle('muted', muted);
   try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch (_) {}
   if (muted && 'speechSynthesis' in window) speechSynthesis.cancel();
@@ -146,14 +146,17 @@ function updateUI() {
 
   els.timer.textContent = formatTime(elapsedSeconds);
   els.phase.textContent = point.phase;
-  els.temp.textContent = 'Temp. objetivo: ' + point.temp + ' °C';
+  els.temp.innerHTML = point.temp + '<span class="temp-unit">°C</span>';
   els.note.textContent = point.note;
-  els.progress.style.width = (phaseProgress(minutes) * 100).toFixed(1) + '%';
+
+  // Barra: decrece según el tiempo restante hasta el próximo cambio
+  const remainingRatio = next ? (1 - phaseProgress(minutes)) : 0;
+  els.progress.style.width = (remainingRatio * 100).toFixed(1) + '%';
 
   if (next) {
     const remaining = Math.max(0, Math.round(next.time * 60 - elapsedSeconds));
     els.countdown.textContent =
-      'Próximo cambio en ' + formatTime(remaining) + ' → ' + next.temp + ' °C (' + next.phase + ')';
+      'Próximo cambio · ' + formatTime(remaining) + ' · ' + next.temp + '°C · ' + next.phase;
   } else {
     els.countdown.textContent = 'Tueste finalizado';
   }
@@ -228,28 +231,36 @@ function setProfile(id) {
 
 function buildChart() {
   const ctx = document.getElementById('roastChart').getContext('2d');
+  const axisColor = '#7a7a7a';
+  const gridColor = 'rgba(255, 255, 255, 0.04)';
+  const lineColor = '#cfcfcf';
+  const accent = '#f4c542';
+  const axisFont = { size: 10, family: "'Inter', sans-serif", weight: '500' };
+  const tickFont = { size: 10, family: "'Inter', sans-serif", weight: '400' };
+
   chart = new Chart(ctx, {
     type: 'line',
     data: {
       datasets: [
         {
-          label: 'Perfil objetivo',
+          label: 'Perfil',
           data: profile.points.map(p => ({ x: p.time, y: p.temp })),
-          borderWidth: 3,
-          borderColor: 'red',
-          backgroundColor: 'rgba(244, 197, 66, 0.08)',
-          pointRadius: 4,
-          pointBackgroundColor: 'red',
+          borderWidth: 1.25,
+          borderColor: lineColor,
+          backgroundColor: 'transparent',
+          pointRadius: 2.5,
+          pointBackgroundColor: lineColor,
+          pointBorderWidth: 0,
           stepped: 'before',
-          fill: true
+          fill: false
         },
         {
-          label: 'Momento actual',
+          label: 'Ahora',
           data: [{ x: 0, y: profile.points[0].temp }],
-          pointRadius: 9,
-          pointBackgroundColor: '#111',
-          pointBorderColor: '#f4c542',
-          pointBorderWidth: 3,
+          pointRadius: 6,
+          pointBackgroundColor: accent,
+          pointBorderColor: '#0a0a0a',
+          pointBorderWidth: 2,
           showLine: false
         }
       ]
@@ -259,21 +270,39 @@ function buildChart() {
       maintainAspectRatio: false,
       animation: false,
       parsing: false,
+      layout: { padding: { top: 8, right: 12, bottom: 4, left: 4 } },
       scales: {
         x: {
           type: 'linear',
-          title: { display: true, text: 'Minutos' },
+          title: { display: true, text: 'MIN', color: axisColor, font: axisFont, padding: { top: 8 } },
           min: 0,
           max: Math.ceil(maxMinutes()),
-          ticks: { stepSize: 1 }
+          ticks: { stepSize: 1, color: axisColor, font: tickFont },
+          grid: { color: gridColor, drawBorder: false, tickColor: 'transparent' },
+          border: { display: false }
         },
         y: {
-          title: { display: true, text: 'Temp. Gene Café (°C)' },
+          title: { display: true, text: '°C', color: axisColor, font: axisFont, padding: { bottom: 8 } },
           min: 140,
-          max: 250
+          max: 250,
+          ticks: { color: axisColor, font: tickFont },
+          grid: { color: gridColor, drawBorder: false, tickColor: 'transparent' },
+          border: { display: false }
         }
       },
-      plugins: { legend: { display: true } }
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: {
+            color: '#b8b8b8',
+            boxWidth: 8,
+            boxHeight: 8,
+            usePointStyle: true,
+            font: { size: 10, family: "'Inter', sans-serif", weight: '500' }
+          }
+        }
+      }
     }
   });
 }

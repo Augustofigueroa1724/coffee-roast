@@ -6,6 +6,9 @@
   <meta name="theme-color" content="#111111" />
   <title>Lucy · Tueste de café</title>
   <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600&display=swap" />
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -28,8 +31,8 @@
       </div>
 
       <div class="timer" id="timer" aria-live="polite">00:00</div>
-      <div class="phase" id="phase">Listo para empezar</div>
-      <div class="temp" id="temperature">Temp. objetivo: -- °C</div>
+      <div class="phase" id="phase">—</div>
+      <div class="temp" id="temperature">—</div>
       <div class="countdown" id="countdown" aria-live="polite">—</div>
 
       <div class="phase-progress" aria-hidden="true">
@@ -42,15 +45,13 @@
         <button class="btn start" id="btn-start">Iniciar</button>
         <button class="btn pause" id="btn-pause">Pausar</button>
         <button class="btn reset" id="btn-reset">Reset</button>
-        <button class="btn mute" id="btn-mute" type="button">🔔 Sonido</button>
+        <button class="btn mute" id="btn-mute" type="button">Sonido</button>
       </div>
     </section>
 
     <section class="panel">
       <canvas id="roastChart"></canvas>
-      <p class="legend">
-        Línea roja: perfil objetivo · Punto: momento actual del tueste
-      </p>
+      <p class="legend">Perfil objetivo · Momento actual</p>
     </section>
   </div>
 
