@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#111111" />
+  <title>Lucy · Tueste de café</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icon.svg" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>Lucy</h1>
+      <p class="subtitle">Asistente de tueste para Gene Café</p>
+    </header>
+
+    <section class="panel">
+      <label class="profile-picker" for="profile-select">
+        <span>Perfil</span>
+        <select id="profile-select"></select>
+      </label>
+
+      <div class="timer" id="timer" aria-live="polite">00:00</div>
+      <div class="phase" id="phase">Listo para empezar</div>
+      <div class="temp" id="temperature">Temp. objetivo: -- °C</div>
+
+      <div class="phase-progress" aria-hidden="true">
+        <div class="phase-progress-fill" id="phase-progress-fill"></div>
+      </div>
+
+      <p class="note" id="note">Carga el café, prepara el tueste y pulsa iniciar.</p>
+
+      <div class="controls">
+        <button class="btn start" id="btn-start">Iniciar</button>
+        <button class="btn pause" id="btn-pause">Pausar</button>
+        <button class="btn reset" id="btn-reset">Reset</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <canvas id="roastChart"></canvas>
+      <p class="legend">
+        Línea roja: perfil objetivo · Punto: momento actual del tueste
+      </p>
+    </section>
+  </div>
+
+  <script src="profiles.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
