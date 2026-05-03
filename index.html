@@ -22,9 +22,15 @@
         <select id="profile-select"></select>
       </label>
 
+      <div class="alert-banner" id="alert-banner" role="alert" aria-live="assertive">
+        <span class="alert-text" id="alert-text"></span>
+        <button class="btn-ack" id="btn-ack" type="button">Hecho</button>
+      </div>
+
       <div class="timer" id="timer" aria-live="polite">00:00</div>
       <div class="phase" id="phase">Listo para empezar</div>
       <div class="temp" id="temperature">Temp. objetivo: -- °C</div>
+      <div class="countdown" id="countdown" aria-live="polite">—</div>
 
       <div class="phase-progress" aria-hidden="true">
         <div class="phase-progress-fill" id="phase-progress-fill"></div>
@@ -36,6 +42,7 @@
         <button class="btn start" id="btn-start">Iniciar</button>
         <button class="btn pause" id="btn-pause">Pausar</button>
         <button class="btn reset" id="btn-reset">Reset</button>
+        <button class="btn mute" id="btn-mute" type="button">🔔 Sonido</button>
       </div>
     </section>
 
