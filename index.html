@@ -30,10 +30,21 @@
         <button class="btn-ack" id="btn-ack" type="button">Hecho</button>
       </div>
 
-      <div class="timer" id="timer" aria-live="polite">00:00</div>
+      <div class="times">
+        <div class="time-block">
+          <div class="time-label">Transcurrido</div>
+          <div class="time-value" id="timer" aria-live="polite">00:00</div>
+          <div class="time-meta" id="timer-meta">&nbsp;</div>
+        </div>
+        <div class="time-block">
+          <div class="time-label">Próximo cambio</div>
+          <div class="time-value" id="countdown" aria-live="polite">—</div>
+          <div class="time-meta" id="countdown-meta">&nbsp;</div>
+        </div>
+      </div>
+
       <div class="phase" id="phase">—</div>
       <div class="temp" id="temperature">—</div>
-      <div class="countdown" id="countdown" aria-live="polite">—</div>
 
       <div class="phase-progress" aria-hidden="true">
         <div class="phase-progress-fill" id="phase-progress-fill"></div>

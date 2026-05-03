@@ -11,6 +11,8 @@ const els = {
   temp: document.getElementById('temperature'),
   note: document.getElementById('note'),
   countdown: document.getElementById('countdown'),
+  countdownMeta: document.getElementById('countdown-meta'),
+  timerMeta: document.getElementById('timer-meta'),
   progress: document.getElementById('phase-progress-fill'),
   select: document.getElementById('profile-select'),
   btnStart: document.getElementById('btn-start'),
@@ -145,6 +147,7 @@ function updateUI() {
   lastPointTime = point.time;
 
   els.timer.textContent = formatTime(elapsedSeconds);
+  els.timerMeta.textContent = '/ ' + formatTime(maxMinutes() * 60);
   els.phase.textContent = point.phase;
   els.temp.innerHTML = point.temp + '<span class="temp-unit">°C</span>';
   els.note.textContent = point.note;
@@ -155,10 +158,11 @@ function updateUI() {
 
   if (next) {
     const remaining = Math.max(0, Math.round(next.time * 60 - elapsedSeconds));
-    els.countdown.textContent =
-      'Próximo cambio · ' + formatTime(remaining) + ' · ' + next.temp + '°C · ' + next.phase;
+    els.countdown.textContent = formatTime(remaining);
+    els.countdownMeta.textContent = next.temp + '°C · ' + next.phase;
   } else {
-    els.countdown.textContent = 'Tueste finalizado';
+    els.countdown.textContent = '—';
+    els.countdownMeta.textContent = 'Tueste finalizado';
   }
 
   if (point.alert) {
