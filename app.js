@@ -7,21 +7,19 @@ const MUTE_KEY = 'lucy-coffee-mute';
 
 const els = {
   timer: document.getElementById('timer'),
+  timerMeta: document.getElementById('timer-meta'),
   phase: document.getElementById('phase'),
   temp: document.getElementById('temperature'),
   note: document.getElementById('note'),
+  nextTemp: document.getElementById('next-temp'),
+  nextPhase: document.getElementById('next-phase'),
   countdown: document.getElementById('countdown'),
-  countdownMeta: document.getElementById('countdown-meta'),
-  timerMeta: document.getElementById('timer-meta'),
   progress: document.getElementById('phase-progress-fill'),
   select: document.getElementById('profile-select'),
   btnStart: document.getElementById('btn-start'),
   btnPause: document.getElementById('btn-pause'),
   btnReset: document.getElementById('btn-reset'),
-  btnMute: document.getElementById('btn-mute'),
-  alertBanner: document.getElementById('alert-banner'),
-  alertText: document.getElementById('alert-text'),
-  btnAck: document.getElementById('btn-ack')
+  btnMute: document.getElementById('btn-mute')
 };
 
 let profile = PROFILES[0];
@@ -32,6 +30,8 @@ let chart = null;
 let lastPointTime = null;
 let muted = false;
 let audioCtx = null;
+let alertTimeout = null;
+const ALERT_DURATION_MS = 12000;
 
 /* ---------- helpers ---------- */
 
@@ -77,60 +77,80 @@ function ensureAudio() {
   return audioCtx;
 }
 
-function tripleBeep() {
-  const ctx = ensureAudio();
-  if (!ctx) return;
-  if (ctx.state === 'suspended') ctx.resume();
+function playBeepSequence(ctx) {
   for (let i = 0; i < 3; i++) {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = 880;
+    osc.type = 'square';
+    osc.frequency.value = 1000;
     osc.connect(gain);
     gain.connect(ctx.destination);
-    const t = ctx.currentTime + i * 0.2;
+    const t = ctx.currentTime + 0.05 + i * 0.22;
     gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(0.35, t + 0.015);
-    gain.gain.linearRampToValueAtTime(0, t + 0.16);
+    gain.gain.linearRampToValueAtTime(0.55, t + 0.012);
+    gain.gain.setValueAtTime(0.55, t + 0.16);
+    gain.gain.linearRampToValueAtTime(0, t + 0.2);
     osc.start(t);
-    osc.stop(t + 0.18);
+    osc.stop(t + 0.22);
+  }
+}
+
+function tripleBeep() {
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') {
+    ctx.resume().then(() => playBeepSequence(ctx)).catch(() => {});
+  } else {
+    playBeepSequence(ctx);
   }
 }
 
 function speak(text) {
   if (!('speechSynthesis' in window)) return;
   try {
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'es-ES';
-    u.rate = 1.0;
-    u.pitch = 1.0;
-    speechSynthesis.speak(u);
+    if (speechSynthesis.speaking || speechSynthesis.pending) {
+      speechSynthesis.cancel();
+    }
+    const fire = () => {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'es-ES';
+      u.rate = 1.0;
+      u.pitch = 1.0;
+      u.volume = 1.0;
+      speechSynthesis.speak(u);
+    };
+    // Pequeño retardo para sortear el bug Chrome cancel+speak
+    setTimeout(fire, 120);
   } catch (_) { /* ignore */ }
 }
 
 function triggerStepAlert(point) {
-  els.alertText.textContent = '⬆ ' + point.phase + ' · ' + point.temp + ' °C';
-  els.alertBanner.classList.add('visible');
-  document.body.classList.add('flash-yellow');
-  setTimeout(() => document.body.classList.remove('flash-yellow'), 2200);
+  els.temp.classList.add('alerting');
+  els.nextTemp.classList.add('alerting');
+  if (alertTimeout) clearTimeout(alertTimeout);
+  alertTimeout = setTimeout(() => {
+    els.temp.classList.remove('alerting');
+    els.nextTemp.classList.remove('alerting');
+  }, ALERT_DURATION_MS);
+
   if (!muted) {
     tripleBeep();
     speak(point.phase + '. ' + point.temp + ' grados');
   }
 }
 
-function ackAlert() {
-  els.alertBanner.classList.remove('visible');
-  document.body.classList.remove('flash-yellow');
-}
-
 function setMuted(value) {
+  const wasMuted = muted;
   muted = !!value;
   els.btnMute.textContent = muted ? 'Silencio' : 'Sonido';
   els.btnMute.classList.toggle('muted', muted);
   try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch (_) {}
   if (muted && 'speechSynthesis' in window) speechSynthesis.cancel();
+  // Al activar el sonido, lanza un beep de prueba para verificar audio
+  if (wasMuted && !muted) {
+    ensureAudio();
+    tripleBeep();
+  }
 }
 
 /* ---------- UI sync ---------- */
@@ -159,10 +179,12 @@ function updateUI() {
   if (next) {
     const remaining = Math.max(0, Math.round(next.time * 60 - elapsedSeconds));
     els.countdown.textContent = formatTime(remaining);
-    els.countdownMeta.textContent = next.temp + '°C · ' + next.phase;
+    els.nextTemp.innerHTML = next.temp + '<span class="temp-unit">°C</span>';
+    els.nextPhase.textContent = next.phase;
   } else {
     els.countdown.textContent = '—';
-    els.countdownMeta.textContent = 'Tueste finalizado';
+    els.nextTemp.textContent = '—';
+    els.nextPhase.textContent = 'Tueste finalizado';
   }
 
   if (point.alert) {
@@ -212,8 +234,9 @@ function resetRoast() {
   pauseRoast();
   elapsedSeconds = 0;
   document.body.classList.remove('flash-red');
-  document.body.classList.remove('flash-yellow');
-  els.alertBanner.classList.remove('visible');
+  els.temp.classList.remove('alerting');
+  els.nextTemp.classList.remove('alerting');
+  if (alertTimeout) { clearTimeout(alertTimeout); alertTimeout = null; }
   lastPointTime = getCurrentPoint(0).time;
   updateUI();
   saveSession();
@@ -373,7 +396,6 @@ function bindEvents() {
   els.btnPause.addEventListener('click', pauseRoast);
   els.btnReset.addEventListener('click', resetRoast);
   els.btnMute.addEventListener('click', () => setMuted(!muted));
-  els.btnAck.addEventListener('click', ackAlert);
   els.select.addEventListener('change', e => setProfile(e.target.value));
 }
 
