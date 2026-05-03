@@ -157,30 +157,22 @@ html, body {
   margin-bottom: 14px;
 }
 .next-temp {
-  font-size: clamp(32px, 8vw, 52px);
+  font-size: clamp(32px, 8vw, 50px);
   font-weight: 300;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.015em;
   line-height: 1;
   color: var(--text);
-  margin-bottom: 8px;
-}
-.next-phase {
-  font-size: 0.66rem;
-  letter-spacing: 0.32em;
-  text-transform: uppercase;
-  color: var(--muted);
-  font-weight: 500;
-  margin-bottom: 18px;
+  margin-bottom: 24px;
 }
 .next-countdown {
-  font-size: clamp(20px, 4.5vw, 28px);
-  font-weight: 300;
+  font-size: clamp(52px, 14vw, 84px);
+  font-weight: 200;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-  color: var(--soft);
+  letter-spacing: -0.025em;
+  color: var(--text);
   line-height: 1;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
 
 /* Countdown bar (decrece con el tiempo restante) */
