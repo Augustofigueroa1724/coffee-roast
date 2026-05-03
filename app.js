@@ -79,22 +79,44 @@ function ensureAudio() {
   return audioCtx;
 }
 
+function playMarimbaNote(ctx, freq, when) {
+  // Sine fundamental + segundo armónico atenuado dan el carácter "pluck"
+  const osc1 = ctx.createOscillator();
+  const osc2 = ctx.createOscillator();
+  const gain1 = ctx.createGain();
+  const gain2 = ctx.createGain();
+
+  osc1.type = 'sine';
+  osc1.frequency.value = freq;
+  osc2.type = 'sine';
+  osc2.frequency.value = freq * 2;
+
+  osc1.connect(gain1).connect(ctx.destination);
+  osc2.connect(gain2).connect(ctx.destination);
+
+  const attack = 0.006;
+  const decay = 0.34;
+
+  gain1.gain.setValueAtTime(0, when);
+  gain1.gain.linearRampToValueAtTime(0.55, when + attack);
+  gain1.gain.exponentialRampToValueAtTime(0.0001, when + decay);
+
+  gain2.gain.setValueAtTime(0, when);
+  gain2.gain.linearRampToValueAtTime(0.18, when + attack);
+  gain2.gain.exponentialRampToValueAtTime(0.0001, when + decay * 0.6);
+
+  osc1.start(when);
+  osc1.stop(when + decay + 0.05);
+  osc2.start(when);
+  osc2.stop(when + decay + 0.05);
+}
+
 function playBeepSequence(ctx) {
-  for (let i = 0; i < 3; i++) {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'square';
-    osc.frequency.value = 1000;
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    const t = ctx.currentTime + 0.05 + i * 0.22;
-    gain.gain.setValueAtTime(0, t);
-    gain.gain.linearRampToValueAtTime(0.55, t + 0.012);
-    gain.gain.setValueAtTime(0.55, t + 0.16);
-    gain.gain.linearRampToValueAtTime(0, t + 0.2);
-    osc.start(t);
-    osc.stop(t + 0.22);
-  }
+  // Arpegio ascendente G5 · A5 · C6, marimba
+  const freqs = [784, 880, 1047];
+  const spacing = 0.15;
+  const start = ctx.currentTime + 0.05;
+  freqs.forEach((f, i) => playMarimbaNote(ctx, f, start + i * spacing));
 }
 
 function tripleBeep() {
