@@ -63,6 +63,24 @@ Se calcula en `profiles.js` (`buildSyntheticCurve`) y se pinta siempre en la gr�
 3. El punto resultante es la **mediana** de los valores supervivientes
 4. La curva termina cuando quedan activos menos de la mitad de los perfiles, para que la cola no la dicte un único perfil largo
 
+### Exportar la curva sintética
+
+Bajo la gráfica hay dos botones de exportación:
+
+- **Exportar RoasTime**: descarga `lucy-curva-sintetica-roastime.json`, un tueste en el formato JSON local de RoasTime (Aillio Bullet) — curva muestreada a 2 Hz (`beanTemperature`), RoR en °C/min (`beanDerivative`) y marcadores de amarilleo y primer crack en las medianas de los perfiles
+- **Exportar CSV**: descarga `lucy-curva-sintetica.csv` (`tiempo_s,tiempo,temperatura_C`), importable en Artisan, hojas de cálculo, etc.
+
+Para llevarla a Roast World / Aillio Bullet (no hay import directo de ficheros en Roast World):
+
+1. Cierra RoasTime y copia el JSON a su carpeta de tuestes:
+   - Linux: `~/.config/roast-time/roasts/`
+   - macOS: `~/Library/Application Support/roast-time/roasts/`
+   - Windows: `%APPDATA%/roast-time/roasts/`
+2. Abre RoasTime: el tueste aparece en la pestaña **Roasts**
+3. Desde el tueste, usa **crear receta** para importar sus triggers de tiempo/temperatura; la receta se sincroniza con Roast World y puede reproducirse en el Bullet
+
+> ⚠️ El esquema de los ficheros de RoasTime no es público; el export replica los campos observados en ficheros reales (mejor esfuerzo). Si una versión futura de RoasTime lo rechaza, el CSV siempre sirve como respaldo.
+
 ### Alerta de cambio de escalón
 En cada transición a un nuevo punto del perfil:
 - Los números de temperatura (actual + próximo) **parpadean en naranja** durante 12 s y se apagan solos — sin diálogo ni botón de "OK"

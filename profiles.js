@@ -125,3 +125,23 @@ function buildSyntheticCurve(profiles = PROFILES, step = SYNTHETIC_STEP_MIN) {
 }
 
 const SYNTHETIC_CURVE = buildSyntheticCurve();
+
+// Puntos de la curva sintética en el mismo formato {time, temp} de los perfiles,
+// para poder interpolarla en cualquier instante.
+const SYNTHETIC_POINTS = SYNTHETIC_CURVE.map(q => ({ time: q.x, temp: q.y }));
+
+function syntheticTempAt(minutes) {
+  return profileTempAt({ points: SYNTHETIC_POINTS }, minutes);
+}
+
+// Mediana del instante en que los perfiles alcanzan una fase (coincidencia
+// exacta del nombre, sin distinguir mayúsculas). Devuelve null si ninguno la tiene.
+function medianPhaseTime(phaseName) {
+  const target = phaseName.toLowerCase();
+  const times = PROFILES
+    .map(p => p.points.find(pt => pt.phase.toLowerCase() === target))
+    .filter(Boolean)
+    .map(pt => pt.time)
+    .sort((a, b) => a - b);
+  return times.length ? median(times) : null;
+}

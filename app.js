@@ -18,7 +18,9 @@ const els = {
   btnStart: document.getElementById('btn-start'),
   btnPause: document.getElementById('btn-pause'),
   btnReset: document.getElementById('btn-reset'),
-  btnMute: document.getElementById('btn-mute')
+  btnMute: document.getElementById('btn-mute'),
+  btnExportRoastime: document.getElementById('btn-export-roastime'),
+  btnExportCsv: document.getElementById('btn-export-csv')
 };
 
 let profile = PROFILES[0];
@@ -422,6 +424,99 @@ function updateChart(minutes, temp) {
   chart.update('none');
 }
 
+/* ---------- exportación de la curva sintética ---------- */
+
+function downloadFile(filename, content, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function randomUid() {
+  const bytes = new Uint8Array(16);
+  if (window.crypto && crypto.getRandomValues) {
+    crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Tueste en el formato JSON local de RoasTime (mejor esfuerzo: el esquema no es
+// público; los campos replican los de los ficheros de ~/.config/roast-time/roasts/).
+// La curva sintética se muestrea a 2 Hz como beanTemperature, con la RoR (°C/min)
+// como beanDerivative y los marcadores de fase en índices de muestra.
+function buildRoastTimeExport() {
+  const sampleRate = 2; // muestras por segundo, como registra el Bullet
+  const endSec = Math.round(SYNTHETIC_POINTS[SYNTHETIC_POINTS.length - 1].time * 60);
+  const samples = endSec * sampleRate + 1;
+
+  const beanTemperature = [];
+  for (let i = 0; i < samples; i++) {
+    const minutes = i / sampleRate / 60;
+    beanTemperature.push(Math.round(syntheticTempAt(minutes) * 10) / 10);
+  }
+
+  // RoR en °C/min con diferencia central
+  const beanDerivative = beanTemperature.map((v, i) => {
+    const prev = beanTemperature[Math.max(0, i - 1)];
+    const next = beanTemperature[Math.min(beanTemperature.length - 1, i + 1)];
+    const dt = (Math.min(beanTemperature.length - 1, i + 1) - Math.max(0, i - 1)) / sampleRate;
+    return dt > 0 ? Math.round(((next - prev) / dt) * 60 * 10) / 10 : 0;
+  });
+
+  const toIndex = minutes => (minutes === null ? 0 : Math.round(minutes * 60 * sampleRate));
+
+  return {
+    roastName: 'Lucy · Curva sintética Gene Café',
+    uid: randomUid(),
+    dateTime: Date.now(),
+    sampleRate,
+    totalRoastTime: endSec,
+    roastStartIndex: 0,
+    roastEndIndex: beanTemperature.length - 1,
+    indexYellowingStart: toIndex(medianPhaseTime('Amarilleo')),
+    indexFirstCrackStart: toIndex(medianPhaseTime('Primer crack')),
+    indexFirstCrackEnd: 0,
+    indexSecondCrackStart: 0,
+    indexSecondCrackEnd: 0,
+    beanChargeTemperature: beanTemperature[0],
+    beanDropTemperature: beanTemperature[beanTemperature.length - 1],
+    beanTemperature,
+    drumTemperature: beanTemperature.slice(),
+    beanDerivative,
+    actions: { actionTimeList: [] },
+    weightGreen: 0,
+    weightRoasted: 0,
+    ambient: 0,
+    humidity: 0,
+    notes: 'Curva sintética generada por Lucy: mediana robusta de los perfiles ' +
+      PROFILES.map(p => p.name).join(', ') +
+      '. Origen: Gene Café. Importar copiando este fichero a la carpeta roasts de RoasTime ' +
+      'y crear una receta a partir del tueste.'
+  };
+}
+
+function exportRoasTime() {
+  const data = buildRoastTimeExport();
+  downloadFile('lucy-curva-sintetica-roastime.json', JSON.stringify(data, null, 2), 'application/json');
+}
+
+function exportCsv() {
+  const rows = ['tiempo_s,tiempo,temperatura_C'];
+  for (const p of SYNTHETIC_POINTS) {
+    const sec = Math.round(p.time * 60);
+    rows.push(sec + ',' + formatTime(sec) + ',' + p.temp.toFixed(1));
+  }
+  downloadFile('lucy-curva-sintetica.csv', rows.join('\n') + '\n', 'text/csv');
+}
+
 /* ---------- persistence ---------- */
 
 function saveSession() {
@@ -471,6 +566,8 @@ function bindEvents() {
   els.btnPause.addEventListener('click', pauseRoast);
   els.btnReset.addEventListener('click', resetRoast);
   els.btnMute.addEventListener('click', () => setMuted(!muted));
+  els.btnExportRoastime.addEventListener('click', exportRoasTime);
+  els.btnExportCsv.addEventListener('click', exportCsv);
   els.select.addEventListener('change', e => setProfile(e.target.value));
   // Re-sincroniza el reloj (Date.now real) al volver a la pestaña y reintenta el wake lock
   document.addEventListener('visibilitychange', () => {

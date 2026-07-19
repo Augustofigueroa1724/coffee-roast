@@ -248,6 +248,19 @@ canvas#roastChart {
   text-align: center;
   font-weight: 500;
 }
+.chart-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.btn.export {
+  padding: 9px 16px;
+  font-size: 0.6rem;
+  color: var(--muted);
+}
+.btn.export:hover:not(:disabled) { color: var(--text); }
 
 /* Flash-red alert (fases críticas: primer crack, fin/descarga) */
 .flash-red { animation: flashRed 0.9s infinite; }
