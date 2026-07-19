@@ -313,12 +313,18 @@ function setProfile(id) {
 
 /* ---------- chart ---------- */
 
+function chartMaxX() {
+  const synthEnd = SYNTHETIC_CURVE.length ? SYNTHETIC_CURVE[SYNTHETIC_CURVE.length - 1].x : 0;
+  return Math.ceil(Math.max(maxMinutes(), synthEnd));
+}
+
 function buildChart() {
   const ctx = document.getElementById('roastChart').getContext('2d');
   const axisColor = '#7a7a7a';
   const gridColor = 'rgba(255, 255, 255, 0.04)';
   const lineColor = '#cfcfcf';
   const accent = '#f4c542';
+  const synthetic = '#5fc8ab';
   const axisFont = { size: 10, family: "'Inter', sans-serif", weight: '500' };
   const tickFont = { size: 10, family: "'Inter', sans-serif", weight: '400' };
 
@@ -346,6 +352,18 @@ function buildChart() {
           pointBorderColor: '#0a0a0a',
           pointBorderWidth: 2,
           showLine: false
+        },
+        {
+          label: 'Curva sintética',
+          data: SYNTHETIC_CURVE,
+          borderWidth: 2,
+          borderColor: synthetic,
+          borderDash: [6, 4],
+          backgroundColor: 'transparent',
+          pointRadius: 0,
+          pointHitRadius: 0,
+          tension: 0.35,
+          fill: false
         }
       ]
     },
@@ -360,7 +378,7 @@ function buildChart() {
           type: 'linear',
           title: { display: true, text: 'MIN', color: axisColor, font: axisFont, padding: { top: 8 } },
           min: 0,
-          max: Math.ceil(maxMinutes()),
+          max: chartMaxX(),
           ticks: { stepSize: 1, color: axisColor, font: tickFont },
           grid: { color: gridColor, drawBorder: false, tickColor: 'transparent' },
           border: { display: false }
@@ -394,7 +412,7 @@ function buildChart() {
 function rebuildChart() {
   if (!chart) return;
   chart.data.datasets[0].data = profile.points.map(p => ({ x: p.time, y: p.temp }));
-  chart.options.scales.x.max = Math.ceil(maxMinutes());
+  chart.options.scales.x.max = chartMaxX();
   chart.update();
 }
 

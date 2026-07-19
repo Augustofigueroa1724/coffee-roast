@@ -52,6 +52,16 @@ La línea del gráfico es escalonada (`stepped: 'before'`) — refleja exactamen
 - **Barra de cuenta atrás** que se vacía conforme se acerca el cambio
 - Nota guía por fase (qué hacer ahora)
 - Gráfico del perfil escalonado con un punto amarillo marcando el momento actual
+- **Curva sintética de tueste**: línea discontinua verde que combina todos los perfiles en una única curva de referencia
+
+### Curva sintética
+
+Se calcula en `profiles.js` (`buildSyntheticCurve`) y se pinta siempre en la gráfica, sea cual sea el perfil seleccionado:
+
+1. Cada perfil se muestrea con interpolación lineal sobre una malla común de 0,25 min
+2. En cada instante se descartan los valores de los cuartiles extremos (top/bottom) que además se desvían más de una desviación típica de la media — con perfiles en acuerdo no se descarta nada; un perfil atípico no arrastra la curva
+3. El punto resultante es la **mediana** de los valores supervivientes
+4. La curva termina cuando quedan activos menos de la mitad de los perfiles, para que la cola no la dicte un único perfil largo
 
 ### Alerta de cambio de escalón
 En cada transición a un nuevo punto del perfil:

@@ -50,3 +50,78 @@ const PROFILES = [
     ]
   }
 ];
+
+// ---------- Curva sintética de tueste ----------
+// Combina todos los perfiles en una única curva robusta:
+// 1. Muestrea cada perfil (interpolación lineal) sobre una malla temporal común.
+// 2. En cada instante descarta los valores que caen en los cuartiles extremos
+//    (top/bottom) cuando además se desvían más de una desviación típica de la
+//    media — así los perfiles atípicos no arrastran la curva, pero si todos
+//    van de acuerdo no se descarta nada.
+// 3. El punto resultante es la mediana de los valores supervivientes.
+// La curva termina cuando quedan activos menos de la mitad de los perfiles,
+// para que la cola no la dicte un único perfil largo.
+
+const SYNTHETIC_STEP_MIN = 0.25;
+
+function profileEnd(p) {
+  return p.points[p.points.length - 1].time;
+}
+
+function profileTempAt(p, t) {
+  const pts = p.points;
+  if (t <= pts[0].time) return pts[0].temp;
+  for (let i = 1; i < pts.length; i++) {
+    if (t <= pts[i].time) {
+      const a = pts[i - 1];
+      const b = pts[i];
+      const f = (t - a.time) / (b.time - a.time);
+      return a.temp + f * (b.temp - a.temp);
+    }
+  }
+  return pts[pts.length - 1].temp;
+}
+
+function median(sorted) {
+  const n = sorted.length;
+  const mid = Math.floor(n / 2);
+  return n % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+function quantile(sorted, q) {
+  const pos = (sorted.length - 1) * q;
+  const lo = Math.floor(pos);
+  const hi = Math.ceil(pos);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+}
+
+function robustCenter(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  if (sorted.length < 3) return median(sorted);
+  const mean = sorted.reduce((s, v) => s + v, 0) / sorted.length;
+  const sd = Math.sqrt(sorted.reduce((s, v) => s + (v - mean) ** 2, 0) / sorted.length);
+  const q1 = quantile(sorted, 0.25);
+  const q3 = quantile(sorted, 0.75);
+  const kept = sorted.filter(v => (v >= q1 && v <= q3) || Math.abs(v - mean) <= sd);
+  return median(kept.length ? kept : sorted);
+}
+
+function buildSyntheticCurve(profiles = PROFILES, step = SYNTHETIC_STEP_MIN) {
+  const minActive = Math.ceil(profiles.length / 2);
+  const maxEnd = Math.max(...profiles.map(profileEnd));
+  const curve = [];
+  for (let i = 0; i * step <= maxEnd + 1e-9; i++) {
+    const t = i * step;
+    const temps = profiles
+      .filter(p => t <= profileEnd(p) + 1e-9)
+      .map(p => profileTempAt(p, t));
+    if (temps.length < minActive) break;
+    curve.push({
+      x: Math.round(t * 100) / 100,
+      y: Math.round(robustCenter(temps) * 10) / 10
+    });
+  }
+  return curve;
+}
+
+const SYNTHETIC_CURVE = buildSyntheticCurve();
